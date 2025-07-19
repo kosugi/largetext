@@ -170,8 +170,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             EndPaint(hwnd, &ps);
             LRESULT(0)
         }
-        WM_KEYDOWN | WM_CHAR | WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN
-        | WM_XBUTTONDOWN => {
+        WM_CHAR | WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_XBUTTONDOWN => {
             let _ = DestroyWindow(hwnd);
             LRESULT(0)
         }
