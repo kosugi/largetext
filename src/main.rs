@@ -1,6 +1,7 @@
 use std::ffi::OsStr;
 use std::iter::once;
 use std::os::windows::ffi::OsStrExt;
+use std::sync::OnceLock;
 use windows::{
     core::{w, Result},
     Win32::{
@@ -9,23 +10,38 @@ use windows::{
     },
 };
 
+extern "system" {
+    pub fn DrawTextW(
+        hdc: HDC,
+        lpchText: *const u16,
+        cchText: i32,
+        lprc: *mut RECT,
+        format: u32,
+    ) -> i32;
+}
+
 fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
     COLORREF((r as u32) | ((g as u32) << 8) | ((b as u32) << 16))
 }
 
-fn to_wide(s: &str) -> &'static mut [u16] {
-    let vec: Vec<u16> = OsStr::new(s).encode_wide().chain(once(0)).collect();
-    Box::leak(vec.into_boxed_slice())
+static TEXT_TO_DISPLAY: OnceLock<Box<[u16]>> = OnceLock::new();
+
+fn to_wide(s: &str) -> Box<[u16]> {
+    let wide: Vec<u16> = OsStr::new(s).encode_wide().chain(once(0)).collect();
+    wide.into_boxed_slice()
 }
 
-static mut TEXT_TO_DISPLAY: Option<&'static mut [u16]> = None;
-
 fn main() -> Result<()> {
-    let args: Vec<String> = std::env::args().collect();
-    let text = if args.len() >= 2 { &args[1] } else { "Hello" };
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+    let text = if args.len() == 0 {
+        String::from("Hello")
+    } else {
+        args.join(" ")
+    };
+
+    TEXT_TO_DISPLAY.set(to_wide(&text)).unwrap();
 
     unsafe {
-        TEXT_TO_DISPLAY = Some(to_wide(text));
         let hinstance = HINSTANCE::from(GetModuleHandleW(None)?);
         let class_name = w!("BigTextWindow");
         let wc = WNDCLASSW {
@@ -104,16 +120,16 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                 bottom: rect.bottom - margin_y,
             };
 
-            let text = TEXT_TO_DISPLAY.as_deref_mut().unwrap();
-
             let mut best_size = 10;
             for size in (10..300).rev() {
                 let hfont = create_font(size);
                 let old_font = SelectObject(hdc, HGDIOBJ(hfont.0));
 
                 let mut calc = usable;
-                let flags = DT_SINGLELINE | DT_CALCRECT;
-                DrawTextW(hdc, text, &mut calc, flags);
+                let flags = DT_SINGLELINE.0 | DT_CALCRECT.0;
+                if let Some(text) = TEXT_TO_DISPLAY.get() {
+                    DrawTextW(hdc, text.as_ptr(), -1, &mut calc, flags);
+                }
 
                 let text_w = calc.right - calc.left;
                 let text_h = calc.bottom - calc.top;
@@ -142,8 +158,10 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             FillRect(hdc, &usable, HBRUSH(so.0));
 
             let mut draw_rect = usable;
-            let flags = DT_CENTER | DT_VCENTER | DT_SINGLELINE;
-            DrawTextW(hdc, text, &mut draw_rect, flags);
+            let flags = DT_CENTER.0 | DT_VCENTER.0 | DT_SINGLELINE.0;
+            if let Some(text) = TEXT_TO_DISPLAY.get() {
+                DrawTextW(hdc, text.as_ptr(), -1, &mut draw_rect, flags);
+            }
 
             SelectObject(hdc, old_font);
             DeleteObject(hfont);
