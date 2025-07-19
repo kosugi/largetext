@@ -49,6 +49,7 @@ fn main() -> Result<()> {
             hInstance: hinstance.into(),
             lpszClassName: class_name,
             hbrBackground: HBRUSH(COLOR_WINDOW.0 as isize),
+            hCursor: LoadCursorW(None, IDC_ARROW).unwrap(),
             ..Default::default()
         };
         RegisterClassW(&wc);
