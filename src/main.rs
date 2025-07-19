@@ -121,9 +121,12 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                 bottom: rect.bottom - margin_y,
             };
 
-            let mut best_size = 10;
-            for size in (10..300).rev() {
-                let hfont = create_font(size);
+            let mut low = 10;
+            let mut high = 1000;
+            let mut best = low;
+            while low <= high {
+                let mid = (low + high) / 2;
+                let hfont = create_font(mid);
                 let old_font = SelectObject(hdc, HGDIOBJ(hfont.0));
 
                 let mut calc = usable;
@@ -132,22 +135,23 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
                     DrawTextW(hdc, text.as_ptr(), -1, &mut calc, flags);
                 }
 
-                let text_w = calc.right - calc.left;
-                let text_h = calc.bottom - calc.top;
-                let max_w = usable.right - usable.left;
-                let max_h = usable.bottom - usable.top;
-
                 SelectObject(hdc, old_font);
                 DeleteObject(hfont);
 
-                if text_w <= max_w && text_h <= max_h {
-                    best_size = size;
-                    break;
+                let text_w = calc.right - calc.left;
+                let text_h = calc.bottom - calc.top;
+                let usable_w = usable.right - usable.left;
+                let usable_h = usable.bottom - usable.top;
+                if text_w <= usable_w && text_h <= usable_h {
+                    best = mid;
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
                 }
             }
 
             // 最終確定フォントで描画
-            let hfont = create_font(best_size);
+            let hfont = create_font(best);
             let old_font = SelectObject(hdc, HGDIOBJ(hfont.0));
 
             SetTextColor(hdc, rgb(255, 255, 255));
