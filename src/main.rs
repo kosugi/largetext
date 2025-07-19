@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         RegisterClassW(&wc);
 
         let hwnd = CreateWindowExW(
-            WS_EX_TOPMOST,
+            WS_EX_LAYERED | WS_EX_TOPMOST,
             class_name,
             w!(""),
             WS_POPUP | WS_VISIBLE,
@@ -70,6 +70,7 @@ fn main() -> Result<()> {
             hinstance,
             None,
         );
+        let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 210, LWA_ALPHA);
         ShowWindow(hwnd, SW_SHOWMAXIMIZED);
         UpdateWindow(hwnd);
 
