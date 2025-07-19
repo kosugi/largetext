@@ -111,8 +111,8 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             let width = rect.right - rect.left;
             let height = rect.bottom - rect.top;
 
-            let margin_x = width / 20;
-            let margin_y = height / 20;
+            let margin_x = width / 30;
+            let margin_y = height / 30;
 
             let usable = RECT {
                 left: rect.left + margin_x,
