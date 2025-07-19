@@ -156,7 +156,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             if so.0 == 0 {
                 panic!("GetStockObject failed");
             }
-            FillRect(hdc, &usable, HBRUSH(so.0));
+            FillRect(hdc, &rect, HBRUSH(so.0));
 
             let mut draw_rect = usable;
             let flags = DT_CENTER.0 | DT_VCENTER.0 | DT_SINGLELINE.0;
